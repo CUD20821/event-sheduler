@@ -1,6 +1,8 @@
 const express = require("express");
 const { google } = require("googleapis");
 const dotenv = require("dotenv");
+const { oauth2 } = require("googleapis/build/src/apis/oauth2");
+const { v4: uuidv4 } = require('uuid')
 
 const app = express();
 
@@ -37,5 +39,54 @@ app.get("/auth/redirect", async (req, res) => {
   oauth2Client.setCredentials(tokens);
   res.send("Authentication successful! Please return to the console.");
 });
+
+const calendar = google.calendar({
+  version: 'v3',
+  auth: oauth2Client
+})
+
+const event = {
+  summary: 'Tech Talk with Arindam',
+  location: 'Google Meet',
+
+  description: "Demo event for Arindam's Blog Post.",
+  start: {
+    dateTime: "2024-03-14T19:30:00+05:30",
+    timeZone: 'Asia/Kolkata'
+  },
+  end: {
+    dateTime: "2024-03-14T20:30:00+05:30",
+    timeZone: 'Asia/Kolkata'
+  },
+  colorId: 1,
+  conferenceData: {
+    createRequest: {
+      requestId: uuidv4()
+    }
+  },
+  attendees: [
+    { email: 'letrungducshizuoka@gmail.com' }
+  ]
+}
+
+app.get('/create-event', async (req, res) => {
+  try {
+    const result = await calendar.events.insert({
+      calendarId: 'primary',
+      auth: oauth2Client,
+      conferenceDataVersion: 1,
+      sendUpdates: 'all',
+      resource: event
+    })
+    res.send({
+      status: 200,
+      event: 'Event Created',
+      link: result.data.hangoutLink
+    })
+  } catch (err) {
+    console.log(err);
+    res.send(err)
+  }
+})
 
 app.listen(port, console.log(`server running on port ${port}`));
